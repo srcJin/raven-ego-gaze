@@ -89,6 +89,14 @@ Development screenshot and dataset fixtures can be regenerated separately with `
 - `media/` — screenshots, English transcript/timing, and narrated demo.
 - `sample-session/` — an inspectable session containing only synthetic data.
 
+## Official simulator view
+
+![Official Raven simulator recording frame](media/official-simulator.png)
+
+The final video is recorded directly through the official Raven simulator. No external titles, captions, or decorative background are added. The other PNGs provide detailed application UI references.
+
 ## License
 
 Application code, the original synthetic scene, and sample data are MIT licensed. Raven Framework is a separately installed proprietary dependency governed by its own license. Its source is excluded from this repository.
+
+Official simulator visuals include Raven-provided background assets, which retain their original rights. The MIT license covers the original application code and original artwork, not third-party simulator assets.

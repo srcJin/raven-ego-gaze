@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "session_id": "session-20261115T000454-ce40a258",
+  "created_at_utc": "2026-11-15T00:04:54.312813+00:00",
+  "status": "complete",
+  "source": "simulator",
+  "clock": "Deterministic simulator nanoseconds (media harness)",
+  "started_ns": 9240000000,
+  "camera_exposure_timestamp_available": false,
+  "association": "nearest observed gaze host receipt; no exposure-time synchronization guarantee",
+  "maximum_association_delta_ms": 50,
+  "maximum_gaze_query_ms": 50,
+  "maximum_capture_call_ms": 150,
+  "gaze_coordinate_space": "synthetic_scene_pixels",
+  "sdk_display_resolution": [
+    720,
+    720
+  ],
+  "calibration": {
+    "status": "synthetic_identity",
+    "scene_projection_valid": true
+  },
+  "confidence_available": false,
+  "robot_actions_available": false,
+  "files": {
+    "gaze": "gaze.jsonl",
+    "frames": "frames.jsonl"
+  },
+  "error": null,
+  "ended_ns": 21320000000,
+  "duration_seconds": 12.08,
+  "frame_count": 61,
+  "gaze_sample_count": 604,
+  "accepted_association_count": 61,
+  "association_coverage": 1.0,
+  "max_observed_delta_ms": 0.0
+}

@@ -1,0 +1,29 @@
+{
+  "duration": 45.2,
+  "chapters": [
+    {
+      "index": 0,
+      "start": 0,
+      "duration": 9.24,
+      "transcript": "Meet EgoGaze. Record what a person sees, alongside where their eyes are directed. A small data collection tool for future robot learning."
+    },
+    {
+      "index": 1,
+      "start": 9.24,
+      "duration": 12.08,
+      "transcript": "Start recording. This simulator follows attention across a synthetic tabletop. Raw frames and gaze samples are stored separately, with host timestamps and visible timing metrics."
+    },
+    {
+      "index": 2,
+      "start": 21.32,
+      "duration": 11.4,
+      "transcript": "Stop, then replay the session. Export a ZIP with images, gaze records, and a quality manifest. Missing gaze stays missing, and poor time matches are flagged."
+    },
+    {
+      "index": 3,
+      "start": 32.72,
+      "duration": 12.48,
+      "transcript": "Real recordings preserve the SDK gaze coordinates. Scene camera projection requires calibration. This is an inspectable collection prototype, with hardware validation and robot training still ahead."
+    }
+  ]
+}

@@ -11,3 +11,4 @@ media/voice-*.wav
 media/chapter-*.wav
 media/narration.wav
 media/demo-silent.mp4
+.demo-recordings/

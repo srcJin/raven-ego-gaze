@@ -17,8 +17,9 @@ ROOT = Path(__file__).resolve().parent
 
 
 class LiveDemo(EgoGaze):
-    def __init__(self, timeline, preroll_seconds=2.0, output=None, record=False, record_output=None):
+    def __init__(self, timeline, preroll_seconds=2.0, output=None, record=False, record_output=None, exit_after_save=False):
         super().__init__(output=output or ROOT / '.demo-recordings')
+        self.exit_after_save = exit_after_save
         self.record_output = record_output
         self.record_simulator = record
         self.save_watch = None
@@ -88,8 +89,15 @@ class LiveDemo(EgoGaze):
     def report_saved_recording(self):
         if self.record_output.is_file():
             print(f"RECORD_SAVED path={self.record_output} bytes={self.record_output.stat().st_size}", flush=True)
+            if self.exit_after_save:
+                self.schedule(0.1, self.close_simulator)
         else:
             print("RECORD_SAVE_PENDING check official simulator save status", flush=True)
+
+    def close_simulator(self):
+        # Closing the host also runs the SDK compositor/recorder thread cleanup.
+        self.window().close()
+        QApplication.instance().quit()
 
     def demo_finished(self):
         frames = self.session.frame_count if self.session else 0
@@ -118,9 +126,13 @@ def main():
                         help='Use the official simulator Record button, then show its Save recording dialog.')
     parser.add_argument('--record-output', type=Path,
                         help='Save the official recording to a new MP4 file using its Qt save dialog. Implies --record.')
+    parser.add_argument('--exit-after-save', action='store_true',
+                        help='Close the simulator cleanly after an automatic recording save.')
     parser.add_argument('--output', type=Path, default=ROOT / '.demo-recordings',
                         help='Directory for synthetic demo sessions and ZIP exports.')
     args = parser.parse_args()
+    if args.exit_after_save and not args.record_output:
+        parser.error("--exit-after-save requires --record-output")
     if args.record_output:
         args.record = True
         args.record_output = args.record_output.expanduser().resolve()
@@ -133,7 +145,7 @@ def main():
     if args.record and args.preroll < 0.5:
         parser.error('--record requires at least 0.5 seconds of preroll')
     timeline = json.loads((ROOT / 'media' / 'timeline.json').read_text())
-    RunApp.run(lambda: LiveDemo(timeline, args.preroll, args.output, args.record, args.record_output), app_id='', app_key='')
+    RunApp.run(lambda: LiveDemo(timeline, args.preroll, args.output, args.record, args.record_output, args.exit_after_save), app_id='', app_key='')
 
 
 if __name__ == '__main__':

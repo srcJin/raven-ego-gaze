@@ -20,7 +20,7 @@ When a frame reaches the recorder, it chooses the gaze sample with the nearest h
 
 Acceptance requires a valid gaze coordinate, nonnegative call durations, absolute host delta at most 50 ms, gaze query duration at most 50 ms, and camera call duration at most 150 ms. An invalid nearest sample remains invalid; an older valid observation is not substituted. Frames with rejected associations remain in the dataset with a reason code.
 
-The default synthetic loop emits images at 5 Hz and samples gaze at 50 Hz. Actual rates depend on scheduling and camera latency. Playback follows the recorded frame timestamps. The generated media sample instead uses a deterministic virtual nanosecond clock and identifies that clock in its manifest.
+The default synthetic loop emits images at 5 Hz and samples gaze at 50 Hz. Actual rates depend on scheduling and camera latency. Playback follows the recorded frame timestamps. The development dataset fixture instead uses a deterministic virtual nanosecond clock and identifies that clock in its manifest. The official simulator video records the app running against the live monotonic clock.
 
 ## Gaze observations
 

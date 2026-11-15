@@ -61,7 +61,7 @@ Camera I/O runs on a worker thread. New recording cannot begin until the old wor
 
 ## Reproduce the media
 
-Install FFmpeg and Node 20 or newer. Copy `.env.example` to a private `.env` and provide a Cartesia API key.
+Use a graphical desktop with the Raven simulator, FFmpeg, and Node 20 or newer. Copy `.env.example` to a private `.env` and provide a Cartesia API key.
 
 ```sh
 node narrate.mjs
@@ -70,7 +70,11 @@ node narrate.mjs
 
 An external credential file is supported with `node narrate.mjs --env-file /path/to/private.env`.
 
-The first command generates four English narration chapters and their measured timeline using Cartesia. The second renders the actual Qt app, performs recording/replay/export actions aligned with those chapters, and muxes the audio into `media/demo.mp4`. It also regenerates four screenshots and the synthetic `sample-session/`. That sample and all demo footage use a deterministic clock, explicitly identified in the manifest. The video is labeled as a simulator demonstration with synthetic scene and gaze. It contains no hardware footage.
+The first command generates four English narration chapters and their measured timeline using Cartesia. The second opens the visible official Raven simulator through `RunApp.run()`. Qt timers drive recording, stop, replay, and export in real time, while the official simulator Record button captures its own composite view. The recording is saved through the standard Qt save dialog. FFmpeg trims the measured preroll and adds the narration. No external titles, captions, borders, or composited UI are added. The app remains in its visibly labeled simulator mode with synthetic scene and gaze. This is simulator footage, not hardware footage.
+
+For manual recording control, run `.venv/bin/python live_demo.py --preroll 2 --record`. The official Save recording dialog appears when the demo ends. Use `--record-output /absolute/new-file.mp4 --exit-after-save` to save and close automatically. `RECORD_T0` and `DEMO_T0` logs provide the monotonic timing offset for narration alignment.
+
+Development screenshot and dataset fixtures can be regenerated separately with `.venv/bin/python capture_fixtures.py`. This offscreen utility produces app-widget PNGs and the synthetic `sample-session/`, and never generates a video. Its sample manifest explicitly identifies the deterministic clock.
 
 ## Files
 
@@ -78,6 +82,9 @@ The first command generates four English narration chapters and their measured t
 - `dataset.py` — gaze validation, host-time association, session storage, and ZIP export.
 - `DATASET.md` — schema, quality gates, sample reader, and calibration requirements.
 - `RESEARCH.md` — research motivation and references.
+- `live_demo.py` — real-time actions inside the official simulator and its recording/save controls.
+- `capture_demo.py` — official live capture, preroll trimming, and narration muxing.
+- `capture_fixtures.py` — development-only app-widget screenshots and synthetic dataset generation.
 - `tests/` — recording, data-quality, and lifecycle regression checks.
 - `media/` — screenshots, English transcript/timing, and narrated demo.
 - `sample-session/` — an inspectable session containing only synthetic data.

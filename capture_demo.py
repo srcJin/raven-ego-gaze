@@ -1,79 +1,65 @@
-"""Render actual EgoGaze recording, replay and export with narration-aligned chapters."""
-import os
-os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
+"""Record the visible official Raven simulator, then trim preroll and add narration.
+
+Requires a graphical desktop, FFmpeg, and media/narration.wav from narrate.mjs.
+The video contains only the official simulator's recorded frames.
+"""
+import argparse
 import json
-import shutil
+import os
+import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QColor, QFont, QImage, QPainter
-from PySide6.QtCore import QRectF
-from main import EgoGaze
 
-FPS=25
-media=Path('media')
-timeline=json.loads((media/'timeline.json').read_text())
-chapters=timeline['chapters']
-qt=QApplication([])
-now=[0]
-with tempfile.TemporaryDirectory() as output:
-    widget=EgoGaze(clock=lambda:now[0],output=output)
-    widget.timer.stop()
-    widget.show()
-    qt.processEvents()
-    record_at=round(chapters[1]['start']*FPS)
-    stop_at=round(chapters[2]['start']*FPS)
-    review_at=stop_at+40
-    export_at=stop_at+80
-    screenshots={25:'01-ready.png',record_at+60:'02-recording.png',stop_at+15:'03-complete.png',export_at+20:'04-replay-export.png'}
-    encoder=subprocess.Popen(['ffmpeg','-y','-f','rawvideo','-pixel_format','rgba','-video_size','1280x900','-framerate',str(FPS),'-i','-','-c:v','libx264','-crf','18','-pix_fmt','yuv420p','-movflags','+faststart','media/demo-silent.mp4'],stdin=subprocess.PIPE,stderr=subprocess.DEVNULL)
-    captions=[('EgoGaze','Human attention, recorded for robot learning.'),('Record what matters.','Raw frames + gaze + host timing.'),('Inspect. Replay. Export.','An open, documented session format.'),('Calibration stays explicit.','Real SDK gaze is not yet scene-camera supervision.')]
-    for frame in range(round(timeline['duration']*FPS)):
-        now[0]=frame*40_000_000
-        if frame==record_at:
-            widget.toggle_record()
-            widget.session.manifest["clock"]="Deterministic simulator nanoseconds (media harness)"
-        if frame==stop_at:
-            widget.stop_recording()
-        if frame==review_at:
-            widget.review()
-        if frame==export_at:
-            widget.export()
-        widget.tick()
-        now[0]+=20_000_000
-        widget.tick()
-        qt.processEvents()
-        shot=widget.app.grab().toImage()
-        if frame in screenshots:
-            assert shot.save(str(media/screenshots[frame]))
-        canvas=QImage(1280,900,QImage.Format.Format_RGBA8888)
-        canvas.fill(QColor('#0A120B'))
-        painter=QPainter(canvas)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.drawImage(QRectF(320,45,640,640),shot)
-        painter.setPen(QColor('#D3F780'))
-        painter.setFont(QFont('Helvetica',12))
-        painter.drawText(48,52,'RAVEN MINI HACK  /  EGOGAZE')
-        painter.drawText(48,855,'SIMULATOR DEMO · SYNTHETIC SCENE AND GAZE · NO DEVICE FOOTAGE')
-        chapter=max(index for index,value in enumerate(chapters) if now[0]/1e9>=value['start'])
-        painter.setPen(QColor('#EEF2E9'))
-        painter.setFont(QFont('Helvetica',25,QFont.Weight.Medium))
-        painter.drawText(320,743,captions[chapter][0])
-        painter.setPen(QColor('#A1AFA6'))
-        painter.setFont(QFont('Helvetica',16))
-        painter.drawText(320,783,captions[chapter][1])
-        painter.end()
-        encoder.stdin.write(bytes(canvas.constBits()))
-    encoder.stdin.close()
-    assert encoder.wait()==0
-    assert widget.session.closed and widget.session.frame_count>10
-    assert widget.last_export.exists()
-    # Public sample contains only our original synthetic scene and synthetic gaze.
-    destination=Path('sample-session')
-    if destination.exists():
-        shutil.rmtree(destination)
-    shutil.copytree(widget.session.path,destination)
-    widget.shutdown()
-subprocess.run(['ffmpeg','-y','-i','media/demo-silent.mp4','-i','media/narration.wav','-c:v','copy','-c:a','aac','-b:a','160k','-shortest','-movflags','+faststart','media/demo.mp4'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-print('Rendered four screenshots and a narrated demo. Verified recording, replay and ZIP export.')
+ROOT = Path(__file__).resolve().parent
+
+
+def recording_offset(log):
+    started = re.search(r'^RECORD_T0 monotonic_ns=(\d+)$', log, re.MULTILINE)
+    demo = re.search(r'^DEMO_T0 monotonic_ns=(\d+)$', log, re.MULTILINE)
+    if not started or not demo:
+        raise RuntimeError('The official recorder did not report its start timestamps.')
+    offset = (int(demo.group(1)) - int(started.group(1))) / 1e9
+    if not 0 <= offset <= 5:
+        raise RuntimeError(f'Unexpected recording preroll: {offset:.3f} seconds')
+    return offset
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path, default=ROOT / 'media/demo.mp4')
+    args = parser.parse_args()
+    if os.environ.get('QT_QPA_PLATFORM') in ('offscreen', 'minimal'):
+        parser.error('Use a graphical desktop for official simulator recording.')
+    audio = ROOT / 'media/narration.wav'
+    if not audio.is_file():
+        parser.error('Generate the Cartesia narration first with node narrate.mjs.')
+    timeline = json.loads((ROOT / 'media/timeline.json').read_text())
+    destination = args.output.expanduser().resolve()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='egogaze-official-') as folder:
+        temporary = Path(folder)
+        raw = temporary / 'official-recording.mp4'
+        command = [sys.executable, '-u', str(ROOT / 'live_demo.py'),
+                   '--preroll', '2', '--record-output', str(raw),
+                   '--output', str(temporary / 'synthetic-sessions'), '--exit-after-save']
+        print('Opening the official Raven simulator and recording the live demo.', flush=True)
+        result = subprocess.run(command, cwd=ROOT, text=True, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, timeout=timeline['duration'] + 90)
+        if result.returncode or not raw.is_file():
+            raise RuntimeError('Official simulator recording failed.\n' + result.stdout[-4000:])
+        offset = recording_offset(result.stdout)
+        subprocess.run([
+            'ffmpeg', '-y', '-ss', f'{offset:.9f}', '-i', str(raw), '-i', str(audio),
+            '-map', '0:v:0', '-map', '1:a:0', '-t', str(timeline['duration']),
+            '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p',
+            '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart',
+            str(destination),
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        print(f'Saved official simulator recording with English narration to {destination}')
+        print(f'Trimmed {offset:.3f} seconds of preroll. No external titles or overlays were added.')
+
+
+if __name__ == '__main__':
+    main()

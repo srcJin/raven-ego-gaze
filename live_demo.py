@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtWidgets import QApplication, QFileDialog
+from PySide6.QtWidgets import QApplication, QFileDialog, QLineEdit
 from raven_framework import RunApp
 from main import EgoGaze
 
@@ -77,6 +77,10 @@ class LiveDemo(EgoGaze):
                 self.save_watch.stop()
                 dialog.setDirectory(str(self.record_output.parent))
                 dialog.selectFile(self.record_output.name)
+                # Qt may ignore selectFile for a new filename while the dialog is visible.
+                filename = dialog.findChild(QLineEdit, "fileNameEdit")
+                if filename is not None:
+                    filename.setText(self.record_output.name)
                 dialog.accept()
                 self.schedule(0.2, self.report_saved_recording)
                 return
